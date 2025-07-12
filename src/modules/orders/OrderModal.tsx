@@ -1,5 +1,14 @@
-import React, { useEffect } from "react";
-import { Modal, Form, Select, InputNumber, Button, Space } from "antd";
+
+import React, { useEffect, useMemo } from "react";
+import {
+  Modal,
+  Form,
+  Select,
+  InputNumber,
+  Button,
+  Space,
+  message,
+} from "antd";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
@@ -15,11 +24,21 @@ export default function OrderModal({
   visible: boolean;
   onClose: () => void;
   onSave: (values: any) => void;
-  products: { _id: string; name: string; price: number }[];
+  products: { _id: string; name: string; price: number; stock?: number }[];
   users: { _id: string; username: string }[];
   order?: any;
 }) {
   const [form] = Form.useForm();
+
+  // Crear un mapa de productos para validar fácilmente por ID
+  const productMap = useMemo(
+    () =>
+      products.reduce((acc, p) => {
+        acc[p._id] = p;
+        return acc;
+      }, {} as Record<string, typeof products[0]>),
+    [products]
+  );
 
   useEffect(() => {
     if (order) {
@@ -38,14 +57,27 @@ export default function OrderModal({
     }
   }, [order, form, visible]);
 
+  const validateNoDuplicates = (products: any[]) => {
+    const ids = products.map((p) => p.productId);
+    const hasDuplicates = new Set(ids).size !== ids.length;
+    return !hasDuplicates;
+  };
+
   return (
     <Modal
       title={order ? "Editar Orden" : "Crear Orden"}
       open={visible}
       onCancel={onClose}
       onOk={() => {
-        form.validateFields()
+        form
+          .validateFields()
           .then((values) => {
+            // Validar duplicados
+            if (!validateNoDuplicates(values.products)) {
+              message.error("No puedes agregar el mismo producto más de una vez");
+              return;
+            }
+
             const preparedProducts = values.products.map((p: any) => ({
               productId: String(p.productId),
               quantity: Number(p.quantity),
@@ -122,7 +154,30 @@ export default function OrderModal({
                     name={[name, "quantity"]}
                     rules={[
                       { required: true, message: "Ingresa cantidad" },
-                      { type: "number", min: 1, message: "Cantidad mínima 1" },
+                      {
+                        type: "number",
+                        min: 1,
+                        message: "Cantidad mínima 1",
+                      },
+                      {
+                        validator: (_, value, callback) => {
+                          const productId =
+                            form.getFieldValue(["products", name, "productId"]);
+                          const product = productMap[productId];
+                          if (
+                            product &&
+                            product.stock !== undefined &&
+                            value > product.stock
+                          ) {
+                            return Promise.reject(
+                              new Error(
+                                `No hay suficiente stock (máx: ${product.stock})`
+                              )
+                            );
+                          }
+                          return Promise.resolve();
+                        },
+                      },
                     ]}
                   >
                     <InputNumber placeholder="Cantidad" min={1} />
@@ -133,10 +188,29 @@ export default function OrderModal({
                     name={[name, "price"]}
                     rules={[
                       { required: true, message: "Ingresa precio" },
-                      { type: "number", min: 0, message: "Precio mínimo 0" },
+                      {
+                        type: "number",
+                        min: 1,
+                        message: "El precio debe ser al menos 1",
+                      },
+                      {
+                        validator: (_, value) => {
+                          const productId =
+                            form.getFieldValue(["products", name, "productId"]);
+                          const product = productMap[productId];
+                          if (product && product.price !== value) {
+                            return Promise.reject(
+                              new Error(
+                                `El precio no coincide con el original ($${product.price})`
+                              )
+                            );
+                          }
+                          return Promise.resolve();
+                        },
+                      },
                     ]}
                   >
-                    <InputNumber placeholder="Precio" min={0} />
+                    <InputNumber placeholder="Precio" min={1} />
                   </Form.Item>
 
                   <MinusCircleOutlined onClick={() => remove(name)} />

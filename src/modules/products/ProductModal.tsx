@@ -39,18 +39,75 @@ export default function ProductModalForm({
       cancelText="Cancelar"
     >
       <Form form={form} layout="vertical">
-        <Form.Item name="name" label="Nombre" rules={[{ required: true }]}>
+        <Form.Item
+          name="name"
+          label="Nombre"
+          rules={[
+            { required: true, message: 'El nombre es obligatorio' },
+            {
+              min: 3,
+              message: 'Debe tener al menos 3 caracteres',
+            },
+            {
+              pattern: /^[a-zA-Z0-9ÁÉÍÓÚáéíóúñÑ\s\-_,.()]+$/,
+              message: 'El nombre no debe contener símbolos especiales',
+            },
+          ]}
+        >
           <Input />
         </Form.Item>
-        <Form.Item name="price" label="Precio" rules={[{ required: true }]}>
-          <InputNumber min={0} style={{ width: '100%' }} />
+
+        <Form.Item
+          name="price"
+          label="Precio"
+          rules={[
+            { required: true, message: 'El precio es obligatorio' },
+            {
+              type: 'number',
+              min: 1,
+              message: 'El precio debe ser al menos 1',
+            },
+          ]}
+        >
+          <InputNumber min={1} step={1} style={{ width: '100%' }} />
         </Form.Item>
-        <Form.Item name="stock" label="Stock" rules={[{ required: true }]}>
-          <InputNumber min={0} style={{ width: '100%' }} />
+
+        <Form.Item
+          name="stock"
+          label="Stock"
+          rules={[
+            { required: true, message: 'El stock es obligatorio' },
+            {
+              type: 'number',
+              min: 0,
+              message: 'El stock no puede ser negativo',
+            },
+            {
+              validator: (_, value) =>
+                Number.isInteger(value)
+                  ? Promise.resolve()
+                  : Promise.reject(new Error('El stock debe ser un número entero')),
+            },
+          ]}
+        >
+          <InputNumber min={0} step={1} style={{ width: '100%' }} />
         </Form.Item>
-        <Form.Item name="description" label="Descripción">
-          <Input.TextArea />
+
+        <Form.Item
+          name="description"
+          label="Descripción"
+          rules={[
+            {
+              validator: (_, value) =>
+                !value || value.length >= 10
+                  ? Promise.resolve()
+                  : Promise.reject(new Error('La descripción debe tener al menos 10 caracteres')),
+            },
+          ]}
+        >
+          <Input.TextArea rows={3} />
         </Form.Item>
+
         <Form.Item name="status" label="Activo" valuePropName="checked">
           <Switch />
         </Form.Item>
