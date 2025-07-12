@@ -56,7 +56,7 @@ const UsersTable = () => {
       const isEdit = !!user._id;
       const endpoint = isEdit
         ? `http://localhost:3000/api/auth/users/${user._id}`
-        : "http://localhost:3000/api/auth/users"; // corregido
+        : "http://localhost:3000/api/auth/user"; // corregido
       const method = isEdit ? "PATCH" : "POST";
       const payload = {
         name: user.name,
