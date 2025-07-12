@@ -5,12 +5,14 @@ const { Option } = Select;
 
 export default function UserModalForm({
   visible,
+  message,  
   onClose,
   onSave,
   user,
   roles,
 }: {
   visible: boolean;
+  message?: string;  
   onClose: () => void;
   onSave: (values: any) => void;
   user?: any;
@@ -45,6 +47,13 @@ export default function UserModalForm({
       okText="Guardar"
       cancelText="Cancelar"
     >
+      {/* Mostrar mensaje si existe */}
+      {message && (
+        <div style={{ marginBottom: 16, color: "red", fontWeight: "bold" }}>
+          {message}
+        </div>
+      )}
+
       <Form form={form} layout="vertical">
         <Form.Item
           name="name"

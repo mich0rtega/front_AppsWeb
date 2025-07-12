@@ -45,6 +45,7 @@ export default function ProductModalForm({
           rules={[
             { required: true, message: 'El nombre es obligatorio' },
             {
+              type: 'string',
               min: 3,
               message: 'Debe tener al menos 3 caracteres',
             },

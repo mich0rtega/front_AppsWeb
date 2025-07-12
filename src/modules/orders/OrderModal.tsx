@@ -1,5 +1,4 @@
-
-import React, { useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Modal,
   Form,
@@ -13,6 +12,48 @@ import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 
+type Product = {
+  _id: string;
+  name: string;
+  price: number;
+  stock?: number;
+};
+
+type User = {
+  _id: string;
+  username: string;
+};
+
+type OrderProductForm = {
+  productId: string;
+  quantity: number;
+  price: number;
+};
+
+type Order = {
+  _id?: string;
+  userCreate?: User | string;
+  products: Array<{
+    productId: Product | string;
+    quantity: number;
+    price: number;
+  }>;
+};
+
+type OrderModalProps = {
+  visible: boolean;
+  onClose: () => void;
+  onSave: (values: {
+    _id?: string;
+    user_id: string;
+    userCreate: string;
+    products: OrderProductForm[];
+  }) => void;
+  products: Product[];
+  users: User[];
+  order?: Order;
+};
+
 export default function OrderModal({
   visible,
   onClose,
@@ -20,36 +61,28 @@ export default function OrderModal({
   products,
   users,
   order,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  onSave: (values: any) => void;
-  products: { _id: string; name: string; price: number; stock?: number }[];
-  users: { _id: string; username: string }[];
-  order?: any;
-}) {
+}: OrderModalProps) {
   const [form] = Form.useForm();
 
-  // Crear un mapa de productos para validar fácilmente por ID
-  const productMap = useMemo(
-    () =>
-      products.reduce((acc, p) => {
-        acc[p._id] = p;
-        return acc;
-      }, {} as Record<string, typeof products[0]>),
-    [products]
-  );
+  // Mapa para acceder rápido a productos por id
+  const productMap = useMemo(() => {
+    return products.reduce<Record<string, Product>>((acc, p) => {
+      acc[p._id] = p;
+      return acc;
+    }, {});
+  }, [products]);
 
   useEffect(() => {
     if (order) {
-      const productsForm = order.products.map((p: any) => ({
-        productId: p.productId._id || p.productId,
+      // Formatear productos para el formulario
+      const productsForm = order.products.map((p) => ({
+        productId: typeof p.productId === "string" ? p.productId : p.productId._id,
         quantity: p.quantity,
         price: p.price,
       }));
 
       form.setFieldsValue({
-        userId: order.userCreate?._id || order.userCreate,
+        userId: typeof order.userCreate === "string" ? order.userCreate : order.userCreate?._id,
         products: productsForm,
       });
     } else {
@@ -57,7 +90,8 @@ export default function OrderModal({
     }
   }, [order, form, visible]);
 
-  const validateNoDuplicates = (products: any[]) => {
+  // Validar que no haya productos duplicados en la lista
+  const validateNoDuplicates = (products: OrderProductForm[]) => {
     const ids = products.map((p) => p.productId);
     const hasDuplicates = new Set(ids).size !== ids.length;
     return !hasDuplicates;
@@ -72,17 +106,18 @@ export default function OrderModal({
         form
           .validateFields()
           .then((values) => {
-            // Validar duplicados
             if (!validateNoDuplicates(values.products)) {
               message.error("No puedes agregar el mismo producto más de una vez");
               return;
             }
 
-            const preparedProducts = values.products.map((p: any) => ({
-              productId: String(p.productId),
-              quantity: Number(p.quantity),
-              price: Number(p.price),
-            }));
+            const preparedProducts: OrderProductForm[] = values.products.map(
+              (p: any) => ({
+                productId: String(p.productId),
+                quantity: Number(p.quantity),
+                price: Number(p.price),
+              })
+            );
 
             onSave({
               _id: order?._id,
@@ -97,6 +132,7 @@ export default function OrderModal({
       }}
       okText={order ? "Actualizar" : "Crear"}
       cancelText="Cancelar"
+      destroyOnClose
     >
       <Form form={form} layout="vertical" name="orderForm">
         <Form.Item
@@ -104,7 +140,7 @@ export default function OrderModal({
           label="Usuario"
           rules={[{ required: true, message: "Selecciona un usuario" }]}
         >
-          <Select placeholder="Selecciona un usuario">
+          <Select placeholder="Selecciona un usuario" showSearch optionFilterProp="children">
             {users.map((user) => (
               <Option key={user._id} value={user._id}>
                 {user.username}
@@ -119,9 +155,7 @@ export default function OrderModal({
             {
               validator: async (_, products) => {
                 if (!products || products.length < 1) {
-                  return Promise.reject(
-                    new Error("Debe agregar al menos un producto")
-                  );
+                  return Promise.reject(new Error("Debe agregar al menos un producto"));
                 }
               },
             },
@@ -140,7 +174,7 @@ export default function OrderModal({
                     name={[name, "productId"]}
                     rules={[{ required: true, message: "Selecciona un producto" }]}
                   >
-                    <Select placeholder="Producto" style={{ width: 200 }}>
+                    <Select placeholder="Producto" style={{ width: 200 }} showSearch optionFilterProp="children">
                       {products.map((p) => (
                         <Option key={p._id} value={p._id}>
                           {p.name} - ${p.price}
@@ -154,15 +188,10 @@ export default function OrderModal({
                     name={[name, "quantity"]}
                     rules={[
                       { required: true, message: "Ingresa cantidad" },
+                      { type: "number", min: 1, message: "Cantidad mínima 1" },
                       {
-                        type: "number",
-                        min: 1,
-                        message: "Cantidad mínima 1",
-                      },
-                      {
-                        validator: (_, value, callback) => {
-                          const productId =
-                            form.getFieldValue(["products", name, "productId"]);
+                        validator: (_, value) => {
+                          const productId = form.getFieldValue(["products", name, "productId"]);
                           const product = productMap[productId];
                           if (
                             product &&
@@ -170,9 +199,7 @@ export default function OrderModal({
                             value > product.stock
                           ) {
                             return Promise.reject(
-                              new Error(
-                                `No hay suficiente stock (máx: ${product.stock})`
-                              )
+                              new Error(`No hay suficiente stock (máx: ${product.stock})`)
                             );
                           }
                           return Promise.resolve();
@@ -188,21 +215,14 @@ export default function OrderModal({
                     name={[name, "price"]}
                     rules={[
                       { required: true, message: "Ingresa precio" },
-                      {
-                        type: "number",
-                        min: 1,
-                        message: "El precio debe ser al menos 1",
-                      },
+                      { type: "number", min: 1, message: "El precio debe ser al menos 1" },
                       {
                         validator: (_, value) => {
-                          const productId =
-                            form.getFieldValue(["products", name, "productId"]);
+                          const productId = form.getFieldValue(["products", name, "productId"]);
                           const product = productMap[productId];
                           if (product && product.price !== value) {
                             return Promise.reject(
-                              new Error(
-                                `El precio no coincide con el original ($${product.price})`
-                              )
+                              new Error(`El precio no coincide con el original ($${product.price})`)
                             );
                           }
                           return Promise.resolve();

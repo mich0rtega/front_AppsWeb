@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Table, Button, Space, message } from "antd";
 import UserModalForm from "../user/UserModal";
@@ -8,8 +7,14 @@ const initialData = [
   { key: "2", name: "Ana López", email: "ana@mail.com", age: 25 },
 ];
 
+const initialRoles = [
+  { _id: "1", name: "Admin" },
+  { _id: "2", name: "User" },
+];
+
 export default function UserData() {
   const [data, setData] = useState(initialData);
+  const [roles] = useState(initialRoles); 
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
 
@@ -25,7 +30,6 @@ export default function UserData() {
 
   const handleSave = (values: any) => {
     if (selectedUser) {
-      // Editar
       setData((prev) =>
         prev.map((item) =>
           item.key === selectedUser.key ? { ...selectedUser, ...values } : item
@@ -33,7 +37,6 @@ export default function UserData() {
       );
       message.success("Usuario editado correctamente");
     } else {
-      // Agregar
       const newUser = {
         ...values,
         key: Date.now().toString(),
@@ -72,6 +75,7 @@ export default function UserData() {
         onClose={() => setModalVisible(false)}
         onSave={handleSave}
         user={selectedUser}
+        roles={roles} // <-- Aquí pasas la prop roles
       />
     </>
   );

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu } from 'antd';
 import {
@@ -13,12 +13,21 @@ const Icons = {
   BarChartOutlined,
 };
 
+// Definimos el tipo para los items del menú
+interface MenuItem {
+  title: string;
+  path: string;
+  icon: keyof typeof Icons;
+  roles: string[];
+}
+
 function MenuDynamic() {
-  const [menuItems, setMenuItems] = useState([]);
-  const navigate = useNavigate(); //manipular url back
+  // Tipamos el estado con el tipo MenuItem[]
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const navigate = useNavigate();
   const location = useLocation();
 
-  const fakeMenuData = [
+  const fakeMenuData: MenuItem[] = [
     {
       title: "Dashboard",
       path: "/dashboard",
@@ -52,8 +61,8 @@ function MenuDynamic() {
   }, []);
 
   const renderMenu = () => {
-    return menuItems.map((item: any) => {
-      const IconComponent = Icons[item.icon as keyof typeof Icons];
+    return menuItems.map((item) => {
+      const IconComponent = Icons[item.icon];
       return {
         key: item.path,
         icon: IconComponent ? <IconComponent /> : null,

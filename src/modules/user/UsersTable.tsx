@@ -1,51 +1,71 @@
-// src/modules/user/UsersTable.tsx
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Table, Typography, Button, Space, message } from "antd";
 import UserModalForm from "../user/UserModal";
 
 const { Title } = Typography;
 
+type User = {
+  _id: string;
+  name: string;
+  username: string;
+  email: string;
+  phone?: string;
+  status: boolean;
+  createDate: string;
+  role?: string | { _id: string; name: string };
+  password?: string;
+};
+
+type Role = {
+  _id: string;
+  name: string;
+};
+
 const UsersTable = () => {
-  const [users, setUsers] = useState([]);
-  const [roles, setRoles] = useState([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const fetchUsers = async () => {
     try {
       const res = await fetch("http://localhost:3000/api/auth/users");
-      const data = await res.json();
+      if (!res.ok) throw new Error("Error al obtener usuarios");
+      const data: User[] = await res.json();
       setUsers(data);
     } catch (error) {
       console.error("Error al obtener usuarios:", error);
+      message.error("Error al obtener usuarios");
     }
   };
 
   const fetchRoles = async () => {
     try {
       const res = await fetch("http://localhost:3000/api/auth/roles");
-      const data = await res.json();
+      if (!res.ok) throw new Error("Error al obtener roles");
+      const data: Role[] = await res.json();
       setRoles(data);
     } catch (error) {
       console.error("Error al obtener roles:", error);
+      message.error("Error al obtener roles");
     }
   };
 
-  const handleSave = async (user: any) => {
+  const handleSave = async (user: User & { password?: string }) => {
     try {
       const isEdit = !!user._id;
       const endpoint = isEdit
         ? `http://localhost:3000/api/auth/users/${user._id}`
-        : "http://localhost:3000/api/auth/user";
+        : "http://localhost:3000/api/auth/users"; // corregido
       const method = isEdit ? "PATCH" : "POST";
-    const payload = {
-      name: user.name,
-      username: user.username,
-      email: user.email,
-      phone: user.phone,
-      ...(user.password && { password: user.password }),
-      role: user.role,  
-    };
+      const payload = {
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+        ...(user.password && { password: user.password }),
+        role: user.role,
+      };
 
       const res = await fetch(endpoint, {
         method,
@@ -53,14 +73,17 @@ const UsersTable = () => {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Error al guardar usuario");
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "Error al guardar usuario");
+      }
 
       message.success(isEdit ? "Usuario actualizado" : "Usuario agregado");
       setModalVisible(false);
       fetchUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al guardar usuario:", error);
-      message.error("Error al guardar usuario");
+      message.error(error.message || "Error al guardar usuario");
     }
   };
 
@@ -69,7 +92,7 @@ const UsersTable = () => {
     setModalVisible(true);
   };
 
-  const openEditModal = (user: any) => {
+  const openEditModal = (user: User) => {
     setSelectedUser(user);
     setModalVisible(true);
   };
@@ -89,7 +112,7 @@ const UsersTable = () => {
     {
       title: "Acciones",
       key: "actions",
-      render: (_: any, record: any) => (
+      render: (_: any, record: User) => (
         <Space>
           <Button onClick={() => openEditModal(record)}>Editar</Button>
         </Space>
@@ -99,7 +122,7 @@ const UsersTable = () => {
 
   useEffect(() => {
     fetchUsers();
-    fetchRoles(); 
+    fetchRoles();
   }, []);
 
   return (

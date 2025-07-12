@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Table, Typography, Tag, Button, message } from "antd";
 import OrderModal from "../orders/OrderModal";
 

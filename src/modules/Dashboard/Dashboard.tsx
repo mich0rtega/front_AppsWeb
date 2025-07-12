@@ -1,7 +1,6 @@
 import { Layout } from 'antd'
 import { Header, Content, Footer } from 'antd/es/layout/layout'
 import Sider from 'antd/es/layout/Sider'
-import React from 'react'
 import { Outlet } from 'react-router-dom'
 import MenuDynamic from './MenuDynamic'
 
